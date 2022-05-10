@@ -19,22 +19,17 @@ async def SearchOnRule34(name='', tag=None):
                     async with session.get(f"https://rule34.xxx/public/autocomplete.php?q={'_'.join(name)}", headers=headers) as response:
                         print(f'--- rule34 status {response.status}')
                         if response.status == 200:
-
-                                result = await response.json(content_type='text/html')
-                                if result:
-                                    print('--- result ---')
-                                    print(result)
-                                    print('--- result ---')
-                                    tag = result[0].get('value')
+                            result = await response.json(content_type='text/html')
+                            if result:
+                                tag = result[0].get('value')
                 except Exception as e:
                     print(str(e))
-                    
                 if tag:
                     result = await gelbooru.search_posts(tags=[tag])
                     return {
                         'tag': tag,
                         'data': [i._payload for i in result]
                     }
-                name.pop()    
+                name.pop()
     except:
         return None

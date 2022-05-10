@@ -14,4 +14,4 @@ container.config.redis_password.from_env("REDIS_PASSWORD", "password")
 container.wire(packages=[
     '.modules.animevost',
     '.modules.animevost.endpoints',
-    ])
+])

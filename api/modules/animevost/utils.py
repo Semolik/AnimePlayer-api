@@ -3,8 +3,7 @@ import re
 from typing import Dict
 import aiohttp
 from lxml import etree
-from .config import ApiLink, SiteLink, ModuleTitle, hentai, module_id
-from ...config import ShikimoriLink, shikimori_api
+from .config import ApiLink, SiteLink, ModuleTitle, module_id
 from ...settings import headers
 from ...utils.shikimori import SearchOnShikimori
 from ...utils.rule_34 import SearchOnRule34

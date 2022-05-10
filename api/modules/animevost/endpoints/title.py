@@ -1,14 +1,16 @@
 from dependency_injector.wiring import inject, Provide
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from ....containers import Container
 from ....services import Service
 from .. import utils
 from ....models import Title
+from ....responses import Message
+from fastapi.responses import JSONResponse
 from ....config import shikimori_key, rule34_key
 import json
 router = APIRouter()
 
-@router.get("/title", response_model=Title)
+@router.get("/title", response_model=Title, responses={404: {"model": Message}})
 @inject
 async def get_title_by_id(id: int, horny: bool | None = None, service: Service = Depends(Provide[Container.service])):
     key = f'animevost_{id}'
@@ -18,7 +20,7 @@ async def get_title_by_id(id: int, horny: bool | None = None, service: Service =
     else:
         response = await utils.ApiPost('info', {'id': id})
         if not response:
-            raise HTTPException(status_code=404, detail="Item not found")
+            return JSONResponse(status_code=404, content={"message": "Item not found"})
         data = await utils.ResponseFormatting(response, full=True)
     result_data = data.copy()
     if horny:

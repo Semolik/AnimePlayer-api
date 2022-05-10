@@ -1,8 +1,11 @@
-from .endpoints import title, random
+from .endpoints import title, random, index
 from . import config
 from fastapi import APIRouter
-animevost_router = APIRouter(prefix=f"/{config.module_id}",tags=[config.ModuleTitle])
+animevost_router = APIRouter(
+    prefix=f"/{config.module_id}", tags=[config.ModuleTitle])
 animevost_router.include_router(
-    random.router )
+    index.router)
 animevost_router.include_router(
     title.router)
+animevost_router.include_router(
+    random.router)
