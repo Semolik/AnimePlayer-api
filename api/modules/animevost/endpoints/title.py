@@ -7,6 +7,7 @@ from ....models import Title
 from ....responses import Message
 from fastapi.responses import JSONResponse
 from ....config import shikimori_key, rule34_key
+
 import json
 router = APIRouter()
 

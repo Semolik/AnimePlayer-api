@@ -1,4 +1,4 @@
-from .endpoints import title, random, index
+from .endpoints import title, random, index, genres
 from . import config
 from fastapi import APIRouter
 animevost_router = APIRouter(
@@ -9,3 +9,5 @@ animevost_router.include_router(
     title.router)
 animevost_router.include_router(
     random.router)
+animevost_router.include_router(
+    genres.router)

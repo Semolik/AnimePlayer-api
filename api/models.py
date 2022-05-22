@@ -1,6 +1,10 @@
 from typing import Dict, List, Optional
-
 from pydantic import BaseModel
+
+
+class genreItem(BaseModel):
+    name: str
+    link: str | None = None
 
 
 class Title(BaseModel):
@@ -9,13 +13,14 @@ class Title(BaseModel):
     poster: str
     id: int
     rating: float
-    year: List[str]
-    genre: List[List[str]]
+    year: genreItem
+    genre:  List[genreItem]
+    type: genreItem
     announce: bool
     series: Dict
     description: str | None = None
     shikimori: Optional[Dict | None]
-    rule34: List | None = None
+    rule34: List[Dict] | None = None
 
 
 class TitleInfo(BaseModel):
@@ -23,9 +28,20 @@ class TitleInfo(BaseModel):
     en_title: str | None = None
     poster: str
     id: int
-    rating: float
-    year: str
-    genre: List[str]
-    announce: bool
-    series: str
+    rating: float | None = None
+    year: genreItem
+    genre: List[genreItem]
+    announce: bool | None = None
+    series: str | None = None
     description: str
+
+
+class TitlesPage(BaseModel):
+    titles: List[TitleInfo]
+    pages: int
+
+
+class Genre(BaseModel):
+    name: str
+    prelink: str
+    links: List[genreItem]

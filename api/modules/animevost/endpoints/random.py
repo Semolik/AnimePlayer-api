@@ -30,7 +30,7 @@ async def get_random_titles(service: Service = Depends(Provide[Container.service
     titles = await asyncio.gather(*[call_request(session, pages, page_quantity) for x in range(4)])
     await session.close()
     titles = [item for i in titles for item in i]
-    await service.SetCache(key, json.dumps(titles), time = 60 * 5)
+    await service.SetCache(key, json.dumps(titles), time = 60)
     return titles
 
 
