@@ -12,7 +12,7 @@ from ...containers import Container
 from ...services import Service
 from dependency_injector.wiring import inject, Provide
 from bs4 import BeautifulSoup
-from fastapi.responses import JSONResponse
+from ...config import page_quantity
 
 
 async def ApiPost(method, data={}, get_data=True, session=None, not_close_session=False, one=True):
@@ -89,6 +89,19 @@ async def ClearDescription(description):
 
 async def FormatGenres(genres):
     return [await FindGenre(genre.lower(), True) for genre in genres]
+
+
+async def search(text, page):
+    async with aiohttp.ClientSession() as session:
+        form = aiohttp.FormData()
+        form.add_field('subaction', 'search')
+        form.add_field('story', text)
+        form.add_field('search_start', page-1)
+        response = await session.post(SiteLink+'index.php?do=search',data=form)
+        if response.status != 200:
+            return
+        html = await response.text()
+    return await GetTitles('', html=html)
 
 
 async def ResponseFormatting(response, full=False):
@@ -171,8 +184,10 @@ async def FindGenre(name: str, search_by_name=False, add_prelink=False):
                     if add_prelink:
                         link['prelink'] = genre.get('prelink')
                     return link
-
-
+    return {
+        'name': name,
+        'link': None,
+    }
 
 
 def GetGenre(GenreUrl, page=None):
@@ -251,12 +266,13 @@ async def PlyrSource(source):
     }
 
 
-async def GetTitles(Url):
-    async with aiohttp.ClientSession() as session:
-        response = await session.get(Url, headers=headers)
-        if response.status != 200:
-            return response.status
-        html = await response.text()
+async def GetTitles(Url, html=None):
+    if not html:
+        async with aiohttp.ClientSession() as session:
+            response = await session.get(Url, headers=headers)
+            if response.status != 200:
+                return response.status
+            html = await response.text()
     soup = BeautifulSoup(html, 'lxml')
     titles = soup.find_all('div', class_='shortstory')
     if not titles:
@@ -274,7 +290,7 @@ async def GetTitles(Url):
             'poster': mirror+i.select(".shortstoryContent > table > tr > td > div > a > img")[0].get('src'),
             'id': await IdFromLink(a.get('href')),
             'rating': None,
-            'announce': None,
+            'announce': '[анонс]' in text.lower(),
         }
         if shortstoryContent:
             for i in shortstoryContent:
@@ -317,3 +333,7 @@ async def SortPlaylist(playlist):
 
 async def IdFromLink(url):
     return int(url.split('/')[-1].split('-')[0])
+
+
+async def GetPageCount(response, page_quantity):
+    return response.get('state').get('count')//page_quantity

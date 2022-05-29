@@ -9,6 +9,8 @@ from ....services import Service
 from dependency_injector.wiring import inject, Provide
 from ....models import TitleInfo
 from ....modules.animevost import config
+from ....utils.messages import messages
+from fastapi.responses import JSONResponse
 import json
 router = APIRouter()
 
@@ -22,7 +24,7 @@ async def get_random_titles(service: Service = Depends(Provide[Container.service
         return json.loads(cache_data)
     response = await utils.ApiGet('last', {'page': 1, 'quantity': 1}, get_data=False)
     if not response:
-        raise HTTPException(status_code=404, detail="Item not found")
+        return JSONResponse(status_code=404, content={"message": messages[404]})
     page_quantity = 20
     count = response.get('state').get('count')
     pages = count // page_quantity
