@@ -7,12 +7,13 @@ from .config import ApiLink, SiteLink, ModuleTitle, module_id
 from ...settings import headers
 from ...utils.shikimori import SearchOnShikimori
 from ...utils.rule_34 import SearchOnRule34
+from ...utils import names
 from fastapi import Depends
 from ...containers import Container
 from ...services import Service
 from dependency_injector.wiring import inject, Provide
 from bs4 import BeautifulSoup
-from ...config import page_quantity
+
 
 
 async def ApiPost(method, data={}, get_data=True, session=None, not_close_session=False, one=True):
@@ -68,18 +69,7 @@ async def GetMirror(service: Service = Depends(Provide[Container.service])):
     return url
 
 
-async def GetSeriesFromTitle(title):
-    series = title.split(" /")
-    if len(series) > 1:
-        series = series[1].split("] [")
-        if len(series) == 1:
-            series = series[0].split(' [')
-            if len(series) > 1:
-                return series[1][:-1]
-        elif series:
-            series = series[0].split(' [')
-            if len(series) > 1:
-                return series[1]
+
 
 
 async def ClearDescription(description):
@@ -97,7 +87,7 @@ async def search(text, page):
         form.add_field('subaction', 'search')
         form.add_field('story', text)
         form.add_field('search_start', page-1)
-        response = await session.post(SiteLink+'index.php?do=search',data=form)
+        response = await session.post(SiteLink+'index.php?do=search', data=form)
         if response.status != 200:
             return
         html = await response.text()
@@ -108,8 +98,8 @@ async def ResponseFormatting(response, full=False):
     text = response.get('title')
     title = text.replace('\\"', '"').replace("\\'", "'")
     data = {
-        'ru_title': await GetTitle(title),
-        'en_title': await GetOriginalTitle(title),
+        'ru_title': await names.GetTitle(title),
+        'en_title': await names.GetOriginalTitle(title),
         'poster': response.get('urlImagePreview'),
         'id': response.get('id'),
         'rating': round(response.get('rating')/response.get('votes')*2, 1),
@@ -123,7 +113,7 @@ async def ResponseFormatting(response, full=False):
         data['description'] = await ClearDescription(description)
     if not full:
         if response.get('series'):
-            data['series'] = await GetSeriesFromTitle(text)
+            data['series'] = await names.GetSeriesFromTitle(text)
         return data
 
     series = await ApiPost('playlist', {'id': response.get('id')}, get_data=False)
@@ -164,14 +154,7 @@ async def rule34_search(data):
         return await SearchOnRule34(title)
 
 
-async def GetTitle(fullTitle):
-    return ' '.join(fullTitle.split('/',  maxsplit=1)[0].split())
 
-
-async def GetOriginalTitle(fullTitle):
-    splitedFullTitle = fullTitle.split('/',  maxsplit=1)
-    if len(splitedFullTitle) == 2:
-        return ' '.join(splitedFullTitle[1].split('[')[0].split())
 
 
 async def FindGenre(name: str, search_by_name=False, add_prelink=False):
@@ -285,8 +268,8 @@ async def GetTitles(Url, html=None):
             ".shortstoryContent > table > tr > td > p")
         text = a.text
         title = {
-            'ru_title': await GetTitle(text),
-            'en_title': await GetOriginalTitle(text),
+            'ru_title': await  names.GetTitle(text),
+            'en_title': await  names.GetOriginalTitle(text),
             'poster': mirror+i.select(".shortstoryContent > table > tr > td > div > a > img")[0].get('src'),
             'id': await IdFromLink(a.get('href')),
             'rating': None,
@@ -304,7 +287,7 @@ async def GetTitles(Url, html=None):
                     title['description'] = await ClearDescription(value)
                 if name.text == 'Жанр: ':
                     title['genre'] = await FormatGenres(value.split(', '))
-        title['series'] = await GetSeriesFromTitle(text)
+        title['series'] = await  names.GetSeriesFromTitle(text)
         output.append(title)
     NavBar = soup.find(class_='block_4')
     page = int([i for i in NavBar.select('span')
@@ -336,4 +319,5 @@ async def IdFromLink(url):
 
 
 async def GetPageCount(response, page_quantity):
-    return response.get('state').get('count')//page_quantity
+    count = response.get('state').get('count')
+    return (count // page_quantity)+ 1 if count % page_quantity > 1 else 0

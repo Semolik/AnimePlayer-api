@@ -14,8 +14,7 @@ router = APIRouter()
 
 
 @router.get("/genres", response_model=List[Genre])
-@inject
-async def get_genres(service: Service = Depends(Provide[Container.service])):
+async def get_genres():
     genres = await utils.GetGenres()
     if not genres:
         return JSONResponse(status_code=404, content={"message": "Item not found"})

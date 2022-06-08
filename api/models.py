@@ -23,6 +23,11 @@ class Title(BaseModel):
     rule34: List[Dict] | None = None
 
 
+class InfoItem(BaseModel):
+    name: str
+    value: str
+
+
 class TitleInfo(BaseModel):
     ru_title: str
     en_title: str | None = None
@@ -34,10 +39,20 @@ class TitleInfo(BaseModel):
     announce: bool | None = None
     series: str | None = None
     description: str
+    other_info: List[InfoItem]
+
+
+class TitleStrId(TitleInfo):
+    id: str
 
 
 class TitlesPage(BaseModel):
     titles: List[TitleInfo]
+    pages: int
+
+
+class TitlesPageStrId(BaseModel):
+    titles: List[TitleStrId]
     pages: int
 
 
