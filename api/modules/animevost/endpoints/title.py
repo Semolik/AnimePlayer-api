@@ -3,18 +3,21 @@ from fastapi import APIRouter, Depends
 from ....containers import Container
 from ....services import Service
 from .. import utils
-from ....models import Title
+from ....core.schemas.title import Title
 from ....responses import Message
 from fastapi.responses import JSONResponse
 from ....config import shikimori_key, rule34_key
+from ....utils import rule_34, shikimori
+from .. import config
 
 import json
 router = APIRouter()
 
+
 @router.get("/title", response_model=Title, responses={404: {"model": Message}})
 @inject
 async def get_title_by_id(id: int, horny: bool | None = None, service: Service = Depends(Provide[Container.service])):
-    key = f'animevost_{id}'
+    key = f'{config.module_id}_{id}'
     cache_data = await service.GetCache(key)
     if cache_data:
         data = json.loads(cache_data)
@@ -23,35 +26,6 @@ async def get_title_by_id(id: int, horny: bool | None = None, service: Service =
         if not response:
             return JSONResponse(status_code=404, content={"message": "Item not found"})
         data = await utils.ResponseFormatting(response, full=True)
-    result_data = data.copy()
-    if horny:
-        rule34_tag = data.get('rule34_tag')
-        rule34_cache = None
-        if rule34_tag:
-            rule34_cache = await service.GetCache(rule34_key.format(rule34_tag))
-            if rule34_cache:
-                rule34_data = json.loads(rule34_cache)
-        if not rule34_cache:
-            rule34_data = await utils.rule34_search(data)
-            if rule34_data:
-                tag = rule34_data.get('tag')
-                data['rule34_tag'] = tag
-                rule34_data = rule34_data.get('data')
-                if rule34_data:
-                    await service.SetCache(rule34_key.format(tag), json.dumps(rule34_data))
-        result_data['rule34'] = rule34_data
-    else:
-        shikimori_id = data.get('shikimori_id')
-        cache_shikimori = None
-        if shikimori_id:
-            cache_shikimori = await service.GetCache(shikimori_key.format(shikimori_id))
-            if cache_shikimori:
-                shikimori_data = json.loads(cache_shikimori)
-        if not cache_shikimori:
-            shikimori_data = await utils.shikimori_search(data)
-            if shikimori_data:
-                await service.SetCache(shikimori_key.format(shikimori_data.get('id')), json.dumps(shikimori_data), 60*60*24)
-                data['shikimori_id'] = shikimori_data.get('id')
-        result_data['shikimori'] = shikimori_data
+    result_data, data = await rule_34.addDataToResponse(data) if horny else await shikimori.addDataToResponse(data, utils.shikimori_search)
     await service.SetCache(key, json.dumps(data))
     return result_data

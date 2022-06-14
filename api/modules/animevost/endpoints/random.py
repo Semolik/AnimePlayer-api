@@ -7,7 +7,7 @@ from ....modules.animevost import utils
 from ....containers import Container
 from ....services import Service
 from dependency_injector.wiring import inject, Provide
-from ....models import TitleInfo
+from ....core.schemas.titles import TitleInfo
 from ....modules.animevost import config
 from ....utils.messages import messages
 from fastapi.responses import JSONResponse

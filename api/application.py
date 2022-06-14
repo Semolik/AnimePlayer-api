@@ -14,6 +14,8 @@ container = Container()
 container.config.redis_host.from_env("REDIS_HOST", "localhost")
 container.config.redis_password.from_env("REDIS_PASSWORD", "password")
 container.wire(packages=[
+    '.utils.shikimori',
+    '.utils.rule_34',
     '.modules.animevost',
     '.modules.animevost.endpoints',
     '.modules.anidub',

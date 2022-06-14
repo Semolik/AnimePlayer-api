@@ -3,17 +3,17 @@ from ....modules.animevost import utils
 from ....containers import Container
 from ....services import Service
 from dependency_injector.wiring import inject, Provide
-from ....models import TitlesPage, Genre
 from ....modules.animevost import config
 import json
-from typing import List
 from ....responses import Message
 from ....utils.messages import messages
 from fastapi.responses import JSONResponse
+from ....core.schemas.genres import Genres
+from ....core.schemas.titles import TitlesPage
 router = APIRouter()
 
 
-@router.get("/genres", response_model=List[Genre])
+@router.get("/genres", response_model=Genres)
 async def get_genres():
     genres = await utils.GetGenres()
     if not genres:

@@ -1,7 +1,6 @@
 import json
 from fastapi import APIRouter, Depends
-
-from ....models import TitlesPageStrId
+from ....core.schemas.titles import TitlesPageStrId
 from ....responses import Message
 from fastapi.responses import JSONResponse
 from ....utils.messages import messages
@@ -20,5 +19,7 @@ async def get_page(page: int | None = 1, service: Service = Depends(Provide[Cont
     if cache_data:
         return json.loads(cache_data)
     titles = await utils.GetTitles(config.SiteLink+'anime'+(f'/page/{page}' if page else ''))
+    if isinstance(titles, int):
+        return JSONResponse(status_code=titles, content={"message": messages[{500: 'not_response', 404: 404}[titles]]})
     await service.SetCache(key, json.dumps(titles), time=60)
     return titles

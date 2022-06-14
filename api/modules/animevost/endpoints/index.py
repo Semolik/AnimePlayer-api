@@ -2,7 +2,7 @@
 import json
 from fastapi import APIRouter, Depends
 from ....modules.animevost import utils
-from ....models import TitlesPage
+from ....core.schemas.titles import TitlesPage
 from ....responses import Message
 from fastapi.responses import JSONResponse
 from ....utils.messages import messages

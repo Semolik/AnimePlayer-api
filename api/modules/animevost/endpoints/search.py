@@ -4,7 +4,7 @@ from ....modules.animevost import utils
 from ....containers import Container
 from ....services import Service
 from dependency_injector.wiring import inject, Provide
-from ....models import TitlesPage
+from ....core.schemas.titles import TitlesPage
 from ....schemas import Search
 from ....modules.animevost import config
 import json

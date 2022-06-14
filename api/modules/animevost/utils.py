@@ -8,12 +8,12 @@ from ...settings import headers
 from ...utils.shikimori import SearchOnShikimori
 from ...utils.rule_34 import SearchOnRule34
 from ...utils import names
+from ...utils.genres import findInGenres
 from fastapi import Depends
 from ...containers import Container
 from ...services import Service
 from dependency_injector.wiring import inject, Provide
 from bs4 import BeautifulSoup
-
 
 
 async def ApiPost(method, data={}, get_data=True, session=None, not_close_session=False, one=True):
@@ -69,9 +69,6 @@ async def GetMirror(service: Service = Depends(Provide[Container.service])):
     return url
 
 
-
-
-
 async def ClearDescription(description):
     return' '.join(description.replace(
         '\\', '').replace('<br />', '\n').split())
@@ -113,7 +110,7 @@ async def ResponseFormatting(response, full=False):
         data['description'] = await ClearDescription(description)
     if not full:
         if response.get('series'):
-            data['series'] = await names.GetSeriesFromTitle(text)
+            data['series_info'] = await names.GetSeriesFromTitle(text)
         return data
 
     series = await ApiPost('playlist', {'id': response.get('id')}, get_data=False)
@@ -148,29 +145,9 @@ async def shikimori_search(data):
         return await SearchOnShikimori(title, title_types.get(title_type.get('name')))
 
 
-async def rule34_search(data):
-    title = data.get('en_title')
-    if title:
-        return await SearchOnRule34(title)
-
-
-
-
-
 async def FindGenre(name: str, search_by_name=False, add_prelink=False):
-    name_lower = name.lower()
     genres = await GetGenres()
-    if genres:
-        for genre in genres:
-            for link in genre.get('links'):
-                if (link.get('name') if search_by_name else link.get('link')) == name_lower:
-                    if add_prelink:
-                        link['prelink'] = genre.get('prelink')
-                    return link
-    return {
-        'name': name,
-        'link': None,
-    }
+    return await findInGenres(search_query=name, genres=genres, search_by_name=search_by_name, add_prelink=add_prelink)
 
 
 def GetGenre(GenreUrl, page=None):
@@ -201,11 +178,20 @@ async def GetGenres(html=None, service: Service = Depends(Provide[Container.serv
     genre_xpath = '/html/body/div/div[2]/div[1]/ul/li[2]'
     category_xpath = '/html/body/div/div[2]/div[1]/ul/li[3]'
     year_xpath = '/html/body/div/div[2]/div[1]/ul/li[4]'
-    data = [
-        await get_genre_data(tree, genre_xpath, '/div/span/a'),
-        await get_genre_data(tree, category_xpath, '/span/span/a'),
-        await fix_year(await get_genre_data(tree, year_xpath, '/span/span/a')),
-    ]
+    data = {
+        'genres': [
+            await get_genre_data(tree, genre_xpath, '/div/span/a'),
+            await get_genre_data(tree, category_xpath, '/span/span/a'),
+            await fix_year(await get_genre_data(tree, year_xpath, '/span/span/a')),
+        ],
+        'sections': [
+            {
+                'name': 'Онгоинги',
+                'prelink': '',
+                'link': 'ongoing'
+            },
+        ]
+    }
     await service.SetCache(key, json.dumps(data), 60*60*24)
     return data
 
@@ -268,8 +254,8 @@ async def GetTitles(Url, html=None):
             ".shortstoryContent > table > tr > td > p")
         text = a.text
         title = {
-            'ru_title': await  names.GetTitle(text),
-            'en_title': await  names.GetOriginalTitle(text),
+            'ru_title': await names.GetTitle(text),
+            'en_title': await names.GetOriginalTitle(text),
             'poster': mirror+i.select(".shortstoryContent > table > tr > td > div > a > img")[0].get('src'),
             'id': await IdFromLink(a.get('href')),
             'rating': None,
@@ -287,7 +273,7 @@ async def GetTitles(Url, html=None):
                     title['description'] = await ClearDescription(value)
                 if name.text == 'Жанр: ':
                     title['genre'] = await FormatGenres(value.split(', '))
-        title['series'] = await  names.GetSeriesFromTitle(text)
+        title['series'] = await names.GetSeriesFromTitle(text)
         output.append(title)
     NavBar = soup.find(class_='block_4')
     page = int([i for i in NavBar.select('span')
@@ -320,4 +306,4 @@ async def IdFromLink(url):
 
 async def GetPageCount(response, page_quantity):
     count = response.get('state').get('count')
-    return (count // page_quantity)+ 1 if count % page_quantity > 1 else 0
+    return (count // page_quantity) + 1 if count % page_quantity > 1 else 0
