@@ -1,6 +1,6 @@
 
 from fastapi import APIRouter, Depends
-from ....modules.animevost import utils
+from .. import utils
 from ....containers import Container
 from ....services import Service
 from dependency_injector.wiring import inject, Provide

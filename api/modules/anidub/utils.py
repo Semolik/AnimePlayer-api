@@ -1,8 +1,6 @@
 import json
-from unicodedata import name
 import aiohttp
 from bs4 import BeautifulSoup
-import requests
 from ...settings import headers
 from . import config
 from ...utils import names
@@ -16,10 +14,13 @@ from lxml import etree
 
 async def GetTitles(Url, html=None):
     if not html:
-        response = requests.get(Url, headers=headers)
-        response.encoding = 'utf8'
-    if html or response:
-        soup = BeautifulSoup(response.text if not html else html, 'lxml')
+        async with aiohttp.ClientSession() as session:
+            response = await session.get(Url, headers=headers)
+            if response.status != 200:
+                return response.status
+            html = await response.text()
+    if html:
+        soup = BeautifulSoup(html, 'lxml')
         data = soup.select('#dle-content')
         if not data:
             return 500
@@ -158,6 +159,13 @@ async def FindGenre(search_query: str, name='', search_by_name=False, add_prelin
     return await findInGenres(search_query=search_query, name=name, genres=genres, search_by_name=search_by_name, add_prelink=add_prelink)
 
 
+async def GetGenre(GenreUrl, page=None):
+    Url = config.SiteLink+GenreUrl
+    if page and page > 1:
+        Url += f'/page/{page}/'
+    return await GetTitles(Url)
+
+
 async def GetTitleById(title_id: str):
     async with aiohttp.ClientSession() as session:
         response = await session.get(config.SiteLink+'/'.join(title_id.split(config.LinkSplitter))+'.html', headers=headers)
@@ -234,13 +242,13 @@ async def GetTitleById(title_id: str):
     series = list()
     series_elems = dle_content[0].select(
         '.fplayer.tabs-box > .tabs-b > .tabs-box > .tabs-sel')
-    if len(series_elems)>1:
+    if len(series_elems) > 1:
         for link in [i for i in series_elems[1].select('span')]:
             series.append({
                 'sources': [
                     {
                         'src': f'/sibnet/{link.get("data").split("=")[-1]}',
-                        'size' : 720,
+                        'size': 720,
                     }
                 ],
                 'name': link.text,

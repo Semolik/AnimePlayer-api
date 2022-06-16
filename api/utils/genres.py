@@ -3,7 +3,7 @@ async def findInGenres(search_query: str, genres, name='', search_by_name=False,
     if genres:
         for genre in genres.get('genres'):
             for link in genre.get('links'):
-                if (link.get('name') if search_by_name else link.get('link')) == search_query_lower:
+                if (link.get('name') if search_by_name else link.get('link')).lower() == search_query_lower:
                     if add_prelink:
                         link['prelink'] = genre.get('prelink')
                     return link

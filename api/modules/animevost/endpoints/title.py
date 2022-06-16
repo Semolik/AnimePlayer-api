@@ -6,7 +6,6 @@ from .. import utils
 from ....core.schemas.title import Title
 from ....responses import Message
 from fastapi.responses import JSONResponse
-from ....config import shikimori_key, rule34_key
 from ....utils import rule_34, shikimori
 from .. import config
 

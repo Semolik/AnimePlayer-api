@@ -3,12 +3,12 @@ import random
 import aiohttp
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException
-from ....modules.animevost import utils
+from .. import utils
 from ....containers import Container
 from ....services import Service
 from dependency_injector.wiring import inject, Provide
 from ....core.schemas.titles import TitleInfo
-from ....modules.animevost import config
+from .. import config
 from ....utils.messages import messages
 from fastapi.responses import JSONResponse
 import json

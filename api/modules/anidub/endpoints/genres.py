@@ -1,13 +1,8 @@
-from fastapi import APIRouter, Depends
-from ....containers import Container
-from ....services import Service
+from fastapi import APIRouter
 from dependency_injector.wiring import inject, Provide
-# from ....models import Genres
 from ....core.schemas.genres import Genres
-from .. import config, utils
-
+from .. import utils
 from typing import List
-
 from fastapi.responses import JSONResponse
 router = APIRouter()
 
