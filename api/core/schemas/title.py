@@ -1,6 +1,7 @@
 from typing import Dict, List, Optional
-from pydantic import BaseModel, conlist
+from pydantic import BaseModel
 from .genres import genreItem
+from .series import series
 
 
 class relatedItem(BaseModel):
@@ -17,22 +18,6 @@ class relatedItems(BaseModel):
 class InfoItem(BaseModel):
     name: str
     value: str
-
-
-class sourceItem(BaseModel):
-    src: str
-    size: int
-
-
-class seriesItem(BaseModel):
-    name: str
-    sources: List[sourceItem]
-
-
-class series(BaseModel):
-    items: conlist(seriesItem, min_items=0)
-    info: str
-    request_required: bool
 
 
 class Title(BaseModel):

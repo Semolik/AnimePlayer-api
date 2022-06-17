@@ -10,7 +10,7 @@ class TitleInfo(BaseModel):
     poster: str
     id: int
     rating: float | None = None
-    year: genreItem
+    year: genreItem | None = None
     genre: List[genreItem]
     announce: bool
     series_info: str | None = None

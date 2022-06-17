@@ -1,4 +1,4 @@
-from .endpoints import index, genres, title, genre
+from .endpoints import index, genres, title, genre, search, random
 from . import config
 from fastapi import APIRouter
 anidub_router = APIRouter(
@@ -8,6 +8,10 @@ anidub_router.include_router(
 anidub_router.include_router(
     title.router)
 anidub_router.include_router(
+    random.router)
+anidub_router.include_router(
     genres.router)
 anidub_router.include_router(
     genre.router)
+anidub_router.include_router(
+    search.router)

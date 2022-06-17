@@ -30,7 +30,9 @@ async def GetTitles(Url, html=None):
         if not titles:
             return 404
         for title in titles:
-            th_in = title.select('.th-in')
+            th_in = title.select('a.th-in')
+            if not th_in or '/anime/' not in th_in[0].get('href'):
+                continue
             poster = th_in[0].select(
                 '.th-img > img')[0].get('data-src').replace('thumbs/', '')
             title_info = {
@@ -247,7 +249,7 @@ async def GetTitleById(title_id: str):
             series.append({
                 'sources': [
                     {
-                        'src': f'/sibnet/{link.get("data").split("=")[-1]}',
+                        'src': f'/utilities/sibnet?sibnet_id={link.get("data").split("=")[-1]}',
                         'size': 720,
                     }
                 ],
@@ -288,3 +290,12 @@ async def GetTitleById(title_id: str):
         })
     out['related'] = related
     return out
+
+
+async def search(text, page):
+    async with aiohttp.ClientSession() as session:
+        response = await session.post(config.SiteLink+'index.php?do=search', params={'story': text, 'result_from': 1, 'full_search': 0, 'search_start': page or 1, 'subaction': 'search', 'do': 'search'}, headers=headers)
+        if response.status != 200:
+            return
+        html = await response.text()
+        return await GetTitles('', html)
