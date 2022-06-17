@@ -4,7 +4,7 @@ from ....containers import Container
 from ....services import Service
 from dependency_injector.wiring import inject, Provide
 from ....core.schemas.titles import TitlesPage
-from ....schemas import Search
+from ....core.schemas.search import Search
 import json
 
 from ....responses import Message
@@ -22,7 +22,7 @@ async def search_titles(search_data: Search, service: Service = Depends(Provide[
     if cache_data:
         return json.loads(cache_data)
     titles = await utils.search(text=search_data.text, page=search_data.page)
-    if not titles:
-        return JSONResponse(status_code=404, content={"message": messages[404]})
+    if isinstance(titles, int):
+        return JSONResponse(status_code=titles, content={"message": messages[{500: 'not_response', 404: 404}[titles]]})
     await service.SetCache(key, json.dumps(titles))
     return titles

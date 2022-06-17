@@ -86,7 +86,7 @@ async def search(text, page):
         form.add_field('search_start', page-1)
         response = await session.post(SiteLink+'index.php?do=search', data=form)
         if response.status != 200:
-            return
+            return response.status
         html = await response.text()
     return await GetTitles('', html=html)
 

@@ -5,8 +5,6 @@ from ....containers import Container
 from ....services import Service
 from .. import utils
 from ....responses import Message
-from fastapi.responses import JSONResponse
-from ....config import shikimori_key, rule34_key
 from .. import config
 from ....core.schemas.title import TitleStrId
 from ....utils import rule_34, shikimori

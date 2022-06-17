@@ -1,17 +1,27 @@
+import json
 import re
 import aiohttp
-from attr import s
+from .. import config
 from fastapi import APIRouter
 from fastapi.responses import JSONResponse
 from ....core.schemas.series import seriesItemWithoutName
-from api.modules.animevost.utils import PlyrSource
 from ....settings import headers
 from ....utils.messages import messages
+from dependency_injector.wiring import inject, Provide
+from fastapi import APIRouter, Depends
+from ....containers import Container
+from ....services import Service
 router = APIRouter()
 
 
+
 @router.get("/sibnet", response_model=seriesItemWithoutName)
-async def get_sibnet_video_by_id(sibnet_id: int):
+@inject
+async def get_sibnet_video_by_id(sibnet_id: int, service: Service = Depends(Provide[Container.service])):
+    key = f'{config.module_id}_{sibnet_id}'
+    cache_data = await service.GetCache(key)
+    if cache_data:
+        return json.loads(cache_data)
     async with aiohttp.ClientSession() as session:
         page_url = f'https://video.sibnet.ru/video{sibnet_id}'
         response = await session.get(page_url, headers=headers)
@@ -36,7 +46,7 @@ async def get_sibnet_video_by_id(sibnet_id: int):
             url = r.headers.get('Location')
             if not url.startswith('//'):
                 return JSONResponse(status_code=500, content={"message": "Ошибка получения ссылки"})
-        return {
+        data = {
             'sources': [
                 {
                     'src': url,
@@ -45,3 +55,5 @@ async def get_sibnet_video_by_id(sibnet_id: int):
             ],
             'poster': poster,
         }
+        await service.SetCache(key, json.dumps(data))
+        return data

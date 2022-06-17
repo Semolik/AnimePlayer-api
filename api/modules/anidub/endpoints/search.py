@@ -4,7 +4,7 @@ from ....containers import Container
 from ....services import Service
 from dependency_injector.wiring import inject, Provide
 from ....core.schemas.titles import TitlesPageStrId
-from ....schemas import Search
+from ....core.schemas.search import Search
 import json
 
 from ....responses import Message
