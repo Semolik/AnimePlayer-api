@@ -3,7 +3,7 @@ import re
 from typing import Dict
 import aiohttp
 from lxml import etree
-from .config import ApiLink, SiteLink, ModuleTitle, module_id
+from .config import ApiLink, SiteLink, autocomplete_min, module_id
 from ...settings import headers
 from ...utils.shikimori import SearchOnShikimori
 from ...utils.rule_34 import SearchOnRule34
@@ -75,7 +75,7 @@ async def ClearDescription(description):
 
 
 async def FormatGenres(genres):
-    return [await FindGenre(genre.lower(), True) for genre in genres]
+    return list(filter(None, [await FindGenre(genre.lower(), True) for genre in genres]))
 
 
 async def search(text, page):
@@ -89,6 +89,28 @@ async def search(text, page):
             return response.status
         html = await response.text()
     return await GetTitles('', html=html)
+
+
+async def autocomplete_search(text):
+    titles = list()
+    if len(text)>=autocomplete_min:
+        async with aiohttp.ClientSession() as session:
+            response = await session.post(SiteLink+'/engine/ajax/search.php', data={'query': text})
+            if response.status != 200:
+                return response.status
+        html = await response.text()
+        tree = etree.HTML(html)
+        a_tags = tree.xpath('/html/body/a')
+        mirror = await GetMirror()
+        for a in a_tags:
+            titles.append({
+                'id': await IdFromLink(a.get('href')),
+                'name': a.xpath("span[@class='searchheading']")[0].text,
+                'poster': mirror+a.xpath("span/img[1]")[0].get('src'),
+            })
+    return {
+        'titles': titles,
+    }
 
 
 async def ResponseFormatting(response, full=False):
@@ -126,8 +148,6 @@ async def ResponseFormatting(response, full=False):
     data_title_type = data.get('type')
     if data_title_type:
         data['type'] = await FindGenre(data_title_type, search_by_name=True)
-
-    # data['service_title'] = ModuleTitle
     return data
 
 

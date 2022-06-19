@@ -1,4 +1,5 @@
 import json
+import re
 import aiohttp
 from bs4 import BeautifulSoup
 from ...settings import headers
@@ -15,7 +16,7 @@ from lxml import etree
 async def GetTitles(Url, html=None):
     if not html:
         async with aiohttp.ClientSession() as session:
-            response = await session.get(Url, headers=headers)
+            response = await session.get(Url)
             if response.status != 200:
                 return response.status
             html = await response.text()
@@ -27,17 +28,15 @@ async def GetTitles(Url, html=None):
         data = data[0]
         outdata = list()
         titles = data.select('.th-item')
-        if not titles:
-            return 404
         for title in titles:
             th_in = title.select('a.th-in')
-            if not th_in or '/anime/' not in th_in[0].get('href'):
+            if not th_in or not await linkIsValid(th_in[0].get('href')):
                 continue
             poster = th_in[0].select(
                 '.th-img > img')[0].get('data-src').replace('thumbs/', '')
             title_info = {
                 'poster': (poster if 'http' in poster else config.SiteLink+poster),
-                'id': config.LinkSplitter.join(th_in[0].get('href').split('/')[3:]).split('.')[0],
+                'id': await IdFromLink(th_in[0].get('href')),
             }
             try:
                 title_info['rating'] = float(
@@ -89,6 +88,8 @@ async def GetTitles(Url, html=None):
             th_tip_category = title.select('.th-tip-btm > .th-tip-category')
             title_info['announce'] = th_tip_category[0].text == (await FindGenre('anime_ongoing')).get('name') if th_tip_category else False
             outdata.append(title_info)
+        if not titles or not outdata:
+            return 404
         pages = data.select('.navigation *')
         return {
             'titles': outdata,
@@ -102,6 +103,10 @@ def FormatLinkList(a_tags, genre=False, one=False):
     array = [[i.text.lower(), i.get('href').split('/')] for i in a_tags]
     data = [{'name': i[0], 'link':i[1][-2 if genre else -1]} for i in array]
     return data[0] if one and data else data, array[0][1][1] if data else None
+
+
+async def IdFromLink(url):
+    return config.LinkSplitter.join(url.split('/')[3:]).split('.')[0]
 
 
 @inject
@@ -131,8 +136,8 @@ async def GetGenres(html: str | None = None, service: Service = Depends(Provide[
             },
             {
                 'name': 'Дорамы',
-                'prelink': '',
-                'link': 'dorama'
+                'prelink': 'dorama',
+                'link': ''
             },
             {
                 'name': 'Анонсы',
@@ -170,9 +175,16 @@ async def GetGenre(GenreUrl, page=None):
 
 async def GetTitleById(title_id: str):
     async with aiohttp.ClientSession() as session:
-        response = await session.get(config.SiteLink+'/'.join(title_id.split(config.LinkSplitter))+'.html', headers=headers)
-        if response.status != 200:
-            return response.status
+        url = config.SiteLink + \
+            '/'.join(title_id.split(config.LinkSplitter))+'.html'
+        if not await linkIsValid(url):
+            return 404
+        response = await session.get(url, headers=headers, allow_redirects=False)
+        status = response.status
+        if status != 200:
+            if status == 301:
+                return 404
+            return status
         html = await response.text()
     soup = BeautifulSoup(html, 'lxml')
     dle_content = soup.select('#dle-content')
@@ -268,7 +280,7 @@ async def GetTitleById(title_id: str):
             related_item = {}
             th_in = i.select('a.th-in')
             href = th_in[0].get('href')
-            if not th_in or '/anime/' not in href:
+            if not th_in or not await linkIsValid(href):
                 continue
             related_poster = i.select('img')
             if related_poster:
@@ -299,3 +311,58 @@ async def search(text, page):
             return
         html = await response.text()
         return await GetTitles('', html)
+
+
+async def GetUserHash(service: Service = Depends(Provide[Container.service])):
+    key = f'{config.module_id}-user_hash'
+    value = await service.GetCache(key)
+    if value:
+        return value
+    async with aiohttp.ClientSession() as session:
+        response = await session.get(config.SiteLink)
+        if response.status != 200:
+            return
+        html = await response.text()
+        user_hash = next(re.finditer(
+            r"var dle_login_hash = '(\w*)';", html), None)
+        if not user_hash:
+            return
+        user_hash = user_hash.group(1)
+        await service.SetCache(key, user_hash)
+        return user_hash
+
+
+async def autocomplete_search(text):
+    async with aiohttp.ClientSession() as session:
+        form = aiohttp.FormData()
+        form.add_field('query', text)
+        user_hash = await GetUserHash()
+        if not user_hash:
+            return 500
+        form.add_field('user_hash', user_hash)
+        response = await session.post(config.SiteLink+'engine/ajax/controller.php?mod=search', data=form)
+        if response.status != 200:
+            return response.status
+    html = await response.text()
+    tree = etree.HTML(html)
+    titles = list()
+    a_tags = tree.xpath('/html/body/a')
+    for a in a_tags:
+        href = a.get('href')
+        if not await linkIsValid(href):
+            continue
+        titles.append({
+            'id': await IdFromLink(href),
+            'name': a.xpath("span[@class='searchheading']")[0].text,
+            'poster': a.xpath("img[1]")[0].get('src'),
+        })
+    return {
+        'titles': titles,
+    }
+
+
+async def linkIsValid(url):
+    parts = list(filter(None, url.split('/')))
+    if len(parts) < 4:
+        return
+    return 'anime' in parts or await FindGenre(parts[2], add_prelink=True)

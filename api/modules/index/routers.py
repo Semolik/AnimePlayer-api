@@ -1,4 +1,4 @@
-from .endpoints import search, available_modules
+from .endpoints import search, available_modules, autocomplete
 from . import config
 from fastapi import APIRouter
 index_router = APIRouter(
@@ -7,3 +7,5 @@ index_router.include_router(
     available_modules.router)
 index_router.include_router(
     search.router)
+index_router.include_router(
+    autocomplete.router)

@@ -1,12 +1,10 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from .. import utils, config
 from ....containers import Container
 from ....services import Service
 from dependency_injector.wiring import inject, Provide
-from ....core.schemas.titles import TitlesPageStrId
-from ....core.schemas.search import Search
+from ....core.schemas.autocomplete import autocompleteSearch
 import json
-
 from ....responses import Message
 from ....utils.messages import GetMessage
 from fastapi.responses import JSONResponse
@@ -14,14 +12,14 @@ from fastapi.responses import JSONResponse
 router = APIRouter()
 
 
-@router.post("/search", response_model=TitlesPageStrId, responses={404: {"model": Message}})
+@router.post("/autocomplete", response_model=autocompleteSearch,  responses={404: {"model": Message}})
 @inject
-async def search_titles(search_data: Search, service: Service = Depends(Provide[Container.service])):
-    key = f'search_{config.module_id}_{"_".join(search_data.text.split(" "))}_{search_data.page}'
+async def autocomplete_search_titles(text: str = Query(default=None, min_length=config.autocomplete_min), service: Service = Depends(Provide[Container.service])):
+    key = f'autocomplete_{config.module_id}_{"_".join(text.split(" "))}'
     cache_data = await service.GetCache(key)
     if cache_data:
         return json.loads(cache_data)
-    titles = await utils.search(text=search_data.text, page=search_data.page)
+    titles = await utils.autocomplete_search(text)
     if isinstance(titles, int):
         return JSONResponse(status_code=titles, content=GetMessage(titles))
     await service.SetCache(key, json.dumps(titles))

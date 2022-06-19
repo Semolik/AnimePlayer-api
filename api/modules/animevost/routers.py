@@ -1,4 +1,4 @@
-from .endpoints import title, random, index, genres, search, genre
+from .endpoints import title, random, index, genres, search, genre, autocomplete
 from . import config
 from fastapi import APIRouter
 animevost_router = APIRouter(
@@ -15,3 +15,5 @@ animevost_router.include_router(
     genre.router)
 animevost_router.include_router(
     search.router)
+animevost_router.include_router(
+    autocomplete.router)

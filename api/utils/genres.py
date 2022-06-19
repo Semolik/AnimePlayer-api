@@ -8,9 +8,5 @@ async def findInGenres(search_query: str, genres, name='', search_by_name=False,
                         link['prelink'] = genre.get('prelink')
                     return link
         for section in genres.get('sections'):
-            if (section.get('name') if search_by_name else section.get('link')) == search_query_lower:
+            if (section.get('name').lower() == search_query_lower if search_by_name else search_query_lower in [section.get('link').lower(), section.get('prelink').lower()]):
                 return section
-    return {
-        'name': search_query_lower if search_by_name else name,
-        'link': None,
-    }

@@ -8,7 +8,7 @@ from ....core.schemas.search import Search
 import json
 
 from ....responses import Message
-from ....utils.messages import messages
+from ....utils.messages import GetMessage
 from fastapi.responses import JSONResponse
 
 router = APIRouter()
@@ -23,6 +23,6 @@ async def search_titles(search_data: Search, service: Service = Depends(Provide[
         return json.loads(cache_data)
     titles = await utils.search(text=search_data.text, page=search_data.page)
     if isinstance(titles, int):
-        return JSONResponse(status_code=titles, content={"message": messages[{500: 'not_response', 404: 404}[titles]]})
+        return JSONResponse(status_code=titles, content=GetMessage(titles))
     await service.SetCache(key, json.dumps(titles))
     return titles
