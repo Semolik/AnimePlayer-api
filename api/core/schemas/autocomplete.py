@@ -1,4 +1,5 @@
 from typing import List
+from fastapi import Query
 from pydantic import BaseModel
 
 
@@ -20,11 +21,13 @@ class autocompleteSearchStrIds(autocompleteSearch):
     titles: List[autocompleteSearchItemStrId]
 
 
-class autocompleteModuleSearchItem(BaseModel):
+class autocompleteModuleItem(BaseModel):
     module_name: str
     module_id: str
     titles: List[autocompleteSearchItemStrId | autocompleteSearchItem]
 
-class autocompleteModuleSearch(BaseModel):
-    items: List[autocompleteModuleSearchItem]
+class autocompleteAllSearch(BaseModel):
+    items: List[autocompleteModuleItem]
 
+class autocompleteAllSearchBody(BaseModel):
+    text: str = Query(default=None, min_length=1)

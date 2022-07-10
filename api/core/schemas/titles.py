@@ -1,20 +1,12 @@
 from typing import List
 from pydantic import BaseModel
 from .genres import genreItem
-from .title import InfoItem
+from .title import InfoItem, TitleBase
 
 
-class TitleInfo(BaseModel):
-    ru_title: str
-    en_title: str | None = None
-    poster: str
-    id: int
-    rating: float | None = None
-    year: genreItem | None = None
-    genre: List[genreItem]
-    announce: bool
+class TitleInfo(TitleBase):
     series_info: str | None = None
-    description: str
+    description: str | None = None
     other_info: List[InfoItem] | None = None
 
 

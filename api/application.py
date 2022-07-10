@@ -7,12 +7,27 @@ from .modules.index.routers import index_router
 from .containers import Container
 
 
+from fastapi.middleware.cors import CORSMiddleware
+
 app = FastAPI()
+
+origins = [
+
+    "*",
+    # "http://localhost:8000",
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.include_router(index_router)
 app.include_router(animevost_router)
 app.include_router(anidub_router)
 app.include_router(utilities_router)
-
 
 
 container = Container()

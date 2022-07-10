@@ -351,10 +351,11 @@ async def autocomplete_search(text):
         href = a.get('href')
         if not await linkIsValid(href):
             continue
+        poster = a.xpath("img[1]")[0].get('src')
         titles.append({
             'id': await IdFromLink(href),
             'name': a.xpath("span[@class='searchheading']")[0].text,
-            'poster': a.xpath("img[1]")[0].get('src'),
+            'poster': poster if 'http' in poster else config.SiteLink+poster,
         })
     return {
         'titles': titles,

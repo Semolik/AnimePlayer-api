@@ -1,4 +1,5 @@
 import json
+import os
 import string
 import aiohttp
 from ..settings import headers
@@ -12,33 +13,27 @@ gelbooru = Gelbooru(api=API_RULE34)
 
 
 async def SearchOnRule34(name='', tag=None):
-    try:
-        if not name and tag:
-            return
-        remove = string.punctuation
-        remove = remove.replace("-", "")
-        name = name.translate(
-            {ord(char): None for char in remove}).lower().split(' ')
-        async with aiohttp.ClientSession() as session:
-            while len(name) > 0 and not tag:
-                try:
-                    async with session.get(f"https://rule34.xxx/public/autocomplete.php?q={'_'.join(name)}", headers=headers) as response:
-                        print(f'--- rule34 status {response.status}')
-                        if response.status == 200:
-                            result = await response.json(content_type='text/html')
-                            if result:
-                                tag = result[0].get('value')
-                except Exception as e:
-                    print(str(e))
-                if tag:
-                    result = await gelbooru.search_posts(tags=[tag])
-                    return {
-                        'tag': tag,
-                        'data': [i._payload for i in result]
-                    }
-                name.pop()
-    except:
-        return None
+    if not name and tag:
+        return
+    remove = string.punctuation
+    remove = remove.replace("-", "")
+    name = name.translate(
+        {ord(char): None for char in remove}).lower().split(' ')
+    async with aiohttp.ClientSession() as session:
+        while len(name) > 0 and not tag:
+            async with session.get(f"https://rule34.xxx/public/autocomplete.php?q={'_'.join(name)}", headers=headers) as response:
+                print(f'--- rule34 status {response.status}')
+                if response.status == 200:
+                    result = await response.json(content_type='text/html')
+                    if result:
+                        tag = result[0].get('value')
+            if tag:
+                result = await gelbooru.search_posts(tags=[tag])
+                return {
+                    'tag': tag,
+                    'data': [i._payload for i in result]
+                }
+            name.pop()
 
 
 @inject
@@ -58,5 +53,5 @@ async def addDataToResponse(data, service: Service = Depends(Provide[Container.s
             rule34_data = rule34_data.get('data')
             if rule34_data:
                 await service.SetCache(rule34_key.format(tag), json.dumps(rule34_data))
-    result_data['rule34'] = rule34_data
+    result_data['rule34'] = {'content': rule34_data}
     return result_data, data

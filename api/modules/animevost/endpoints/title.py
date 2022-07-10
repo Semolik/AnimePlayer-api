@@ -1,5 +1,7 @@
 from dependency_injector.wiring import inject, Provide
 from fastapi import APIRouter, Depends
+
+from api.utils.result_responce import GetResultResponce
 from ....containers import Container
 from ....services import Service
 from .. import utils
@@ -22,9 +24,8 @@ async def get_title_by_id(id: int, horny: bool | None = None, service: Service =
         data = json.loads(cache_data)
     else:
         response = await utils.ApiPost('info', {'id': id})
-        if not response:
-            return JSONResponse(status_code=404, content={"message": "Item not found"})
+        if isinstance(response, int):
+            return utils.GetErrorResponse(response)
         data = await utils.ResponseFormatting(response, full=True)
-    result_data, data = await rule_34.addDataToResponse(data) if horny else await shikimori.addDataToResponse(data, utils.shikimori_search)
-    await service.SetCache(key, json.dumps(data))
-    return result_data
+    return await GetResultResponce(key=key, service=service, data=data, search_function=utils.shikimori_search, horny=horny)
+

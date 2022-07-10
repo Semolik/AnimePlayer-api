@@ -20,8 +20,7 @@ async def SearchOnShikimori(name, kind=None):
     conn = aiohttp.TCPConnector(ssl=ssl_context)
     async with aiohttp.ClientSession(connector=conn) as session:
         response = await session.get(f'https://shikimori.one/animes/autocomplete/v2?search={requote_uri(name)}', headers=headers)
-        if response.status != 200:
-            print(f'--- shikimori status {response.status} ---')
+        if response.status not in (200, 404):
             return
         html = await response.text()
         tree = etree.HTML(html)

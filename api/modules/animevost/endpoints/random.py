@@ -23,8 +23,8 @@ async def get_random_titles(service: Service = Depends(Provide[Container.service
     if cache_data:
         return json.loads(cache_data)
     response = await utils.ApiGet('last', {'page': 1, 'quantity': 1}, get_data=False)
-    if not response:
-        return JSONResponse(status_code=404, content={"message": messages[404]})
+    if isinstance(response, int):
+        return JSONResponse(status_code=404, content={"message": messages[404] if response == 404 else messages['not_response']})
     page_quantity = 20
     count = response.get('state').get('count')
     pages = count // page_quantity
@@ -32,14 +32,14 @@ async def get_random_titles(service: Service = Depends(Provide[Container.service
     titles = await asyncio.gather(*[call_request(session, pages, page_quantity) for x in range(4)])
     await session.close()
     titles = [item for i in titles for item in i]
-    await service.SetCache(key, json.dumps(titles), time = 60 * 20)
+    await service.SetCache(key, json.dumps(titles), time=60 * 20)
     return titles
 
 
 async def call_request(session, pages, page_quantity):
     titles = list()
     page_response = await utils.ApiGet('last', {'page': random.randint(1, pages), 'quantity': page_quantity}, session=session, not_close_session=True, one=False)
-    if page_response:
+    if not isinstance(page_response, int):
         random.shuffle(page_response)
         page_response = page_response[:5]
         if len(page_response) > 5:

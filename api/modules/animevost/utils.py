@@ -6,21 +6,23 @@ from lxml import etree
 from .config import ApiLink, SiteLink, autocomplete_min, module_id
 from ...settings import headers
 from ...utils.shikimori import SearchOnShikimori
-from ...utils.rule_34 import SearchOnRule34
 from ...utils import names
+from ...utils.messages import messages
 from ...utils.genres import findInGenres
 from fastapi import Depends
 from ...containers import Container
 from ...services import Service
 from dependency_injector.wiring import inject, Provide
 from bs4 import BeautifulSoup
+from fastapi.responses import JSONResponse
 
 
 async def ApiPost(method, data={}, get_data=True, session=None, not_close_session=False, one=True):
     session = session or aiohttp.ClientSession()
     response = await session.post(ApiLink+method, data=data)
-    if response.status != 200:
-        return
+    status = response.status
+    if status != 200:
+        return status
     response_json = await response.json()
     if not not_close_session:
         await session.close()
@@ -29,24 +31,30 @@ async def ApiPost(method, data={}, get_data=True, session=None, not_close_sessio
     data = response_json.get('data')
     if data:
         return data[0] if one else data
+    else:
+        return 404
 
 
 async def ApiGet(method, params={}, get_data=True, session=None, not_close_session=False, one=True):
     session = session or aiohttp.ClientSession()
     response = await session.get(ApiLink+method, params=params)
-    if response.status != 200:
-        return
+    status = response.status
+    if status != 200:
+        return status
     response_json = await response.json()
     if not not_close_session:
         await session.close()
     state = response_json.get('state')
-    if state and state.get('status') != 'ok':
-        return
     if get_data is not True:
         return response_json
+    if state:
+        if state.get('status') != 'ok':
+            return 404
     data = response_json.get('data')
     if data:
         return data[0] if one else data
+    else:
+        return 404
 
 
 @inject
@@ -93,7 +101,7 @@ async def search(text, page):
 
 async def autocomplete_search(text):
     titles = list()
-    if len(text)>=autocomplete_min:
+    if len(text) >= autocomplete_min:
         async with aiohttp.ClientSession() as session:
             response = await session.post(SiteLink+'/engine/ajax/search.php', data={'query': text})
             if response.status != 200:
@@ -121,33 +129,50 @@ async def ResponseFormatting(response, full=False):
         'en_title': await names.GetOriginalTitle(title),
         'poster': response.get('urlImagePreview'),
         'id': response.get('id'),
-        'rating': round(response.get('rating')/response.get('votes')*2, 1),
+        'rating': round(response.get('rating')/response.get('votes')*2, 1) if 0 not in (response.get('votes'), response.get('rating')) else 0,
         'year': await FindGenre(response.get('year')),
         'genre': await FormatGenres(response.get('genre').split(', ')),
         'announce': response.get('series') == '',
-        'type': response.get('type'),
     }
+    data_title_type = response.get('type')
+    if data_title_type:
+        data['type'] = await FindGenre(data_title_type, search_by_name=True)
     description = response.get('description')
     if description:
         data['description'] = await ClearDescription(description)
     if not full:
-        if response.get('series'):
+        if not data.get('announce'):
             data['series_info'] = await names.GetSeriesFromTitle(text)
         return data
+    series = list()
+    series_api = await ApiPost('playlist', {'id': response.get('id')}, get_data=False)
+    if not isinstance(series_api, int):
+        series_ = await SortPlaylist(series_api)
+        for index, item in enumerate(series_):
+            sources = list()
+            std = item.get('std')
+            if std:
+                sources.append({
+                    'src': std,
+                    'size': 480,
+                })
+            hd = item.get('hd')
+            if std:
+                sources.append({
+                    'src': hd,
+                    'size': 720,
+                })
+            series.append({
+                'sources': sources,
+                'name': item.get('name'),
+            })
+    data['series'] = {
+        'items': series,
+        'request_required': False,
+        'info': await names.GetSeriesFromTitle(title),
+    }
+    # print(data['series'])
 
-    series = await ApiPost('playlist', {'id': response.get('id')}, get_data=False)
-    if series:
-        series_ = await SortPlaylist(series)
-        data['series'] = {
-            'info': re.findall('\[(.*?)\]', response.get('title')),
-            'data': series_,
-            'direct_link': True,
-        }
-    else:
-        data['series'] = None
-    data_title_type = data.get('type')
-    if data_title_type:
-        data['type'] = await FindGenre(data_title_type, search_by_name=True)
     return data
 
 
@@ -237,24 +262,6 @@ def Sorting(item: Dict) -> int:
     return -1
 
 
-async def PlyrSource(source):
-    return {
-        'type': "video",
-        'sources': [
-            {
-                'src': source['hd'],
-                'size': 720,
-            },
-            {
-                'src': source['std'],
-                'size': 480,
-            },
-        ],
-        'poster': source['preview'],
-        'name': source['name'],
-    }
-
-
 async def GetTitles(Url, html=None):
     if not html:
         async with aiohttp.ClientSession() as session:
@@ -317,7 +324,7 @@ async def SortPlaylist(playlist):
     if series:
         series = sorted(series, key=Sorting)
     other = sorted(other, key=lambda _: _.get('name'))
-    return [await PlyrSource(i) for i in series+other]
+    return series+other
 
 
 async def IdFromLink(url):
@@ -326,4 +333,15 @@ async def IdFromLink(url):
 
 async def GetPageCount(response, page_quantity):
     count = response.get('state').get('count')
-    return (count // page_quantity) + 1 if count % page_quantity > 1 else 0
+    return (count // page_quantity) + (1 if count % page_quantity > 1 else 0)
+
+
+def GetErrorMessage(status):
+    message = messages['not_response']
+    if status in (404, 500):
+        message = messages[status]
+    return message
+
+
+def GetErrorResponse(status_code):
+    return JSONResponse(status_code=404, content={"message": GetErrorMessage(status_code)})

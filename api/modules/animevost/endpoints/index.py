@@ -21,8 +21,8 @@ async def get_page(page: int | None = 1, service: Service = Depends(Provide[Cont
     if cache_data:
         return json.loads(cache_data)
     response = await utils.ApiGet('last', {'page': page, 'quantity': config.page_quantity}, one=False, get_data=False)
-    if not response:
-        return JSONResponse(status_code=404, content={"message": messages[404]})
+    if isinstance(response, int):
+        return utils.GetErrorResponse(response)
     data = response.get('data')
     if data is None:
         return JSONResponse(status_code=404, content={"message": messages[404]})
