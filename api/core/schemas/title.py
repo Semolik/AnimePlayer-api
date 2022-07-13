@@ -1,6 +1,7 @@
 from typing import Dict, List, Optional
 from pydantic import BaseModel
 
+from .image import Image
 from .rule34 import Rule34TitleInfo
 from .genres import genreItem
 from .series import series
@@ -8,7 +9,7 @@ from .series import series
 
 class relatedItem(BaseModel):
     ru_title: str
-    poster: str | None = None
+    poster: Image | None = None
     id: str
 
 
@@ -25,7 +26,7 @@ class InfoItem(BaseModel):
 class TitleBase(BaseModel):
     ru_title: str
     en_title: str | None = None
-    poster: str | None = None
+    poster: Image | None = None
     id: int
     genre:  List[genreItem]
     type: genreItem | None = None
@@ -33,12 +34,12 @@ class TitleBase(BaseModel):
     rating: float | None = None
     announce: bool
 
+
 class Title(TitleBase):
-    
     series: series
     description: str | None = None
     shikimori: Optional[Dict | None]
-    rule34: Rule34TitleInfo  | None = None
+    rule34: Rule34TitleInfo | None = None
     related: List[relatedItems] | None = None
     other_info: List[InfoItem] | None = None
 

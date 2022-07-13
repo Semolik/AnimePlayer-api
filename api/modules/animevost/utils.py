@@ -3,12 +3,16 @@ import re
 from typing import Dict
 import aiohttp
 from lxml import etree
+
+
 from .config import ApiLink, SiteLink, autocomplete_min, module_id
 from ...settings import headers
-from ...utils.shikimori import SearchOnShikimori
-from ...utils import names
-from ...utils.messages import messages
-from ...utils.genres import findInGenres
+
+from api.utils.images import BlurhashImage
+from api.utils.shikimori import SearchOnShikimori
+from api.utils import names
+from api.utils.messages import messages
+from api.utils.genres import findInGenres
 from fastapi import Depends
 from ...containers import Container
 from ...services import Service

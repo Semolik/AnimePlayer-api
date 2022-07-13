@@ -5,6 +5,7 @@ from .title import InfoItem, TitleBase
 
 
 class TitleInfo(TitleBase):
+    genre:  List[genreItem] | None = None
     series_info: str | None = None
     description: str | None = None
     other_info: List[InfoItem] | None = None
